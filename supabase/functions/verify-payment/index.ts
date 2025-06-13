@@ -18,10 +18,10 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { reference }: VerifyRequest = await req.json();
     
-    const paystackSecretKey = Deno.env.get('PAYSTACK_LIVE_SECRET_KEY');
+    const paystackSecretKey = Deno.env.get('PAYSTACK_TEST_SECRET_KEY');
     
     if (!paystackSecretKey) {
-      throw new Error('Paystack secret key not configured');
+      throw new Error('Paystack test secret key not configured');
     }
 
     // Verify payment with Paystack
