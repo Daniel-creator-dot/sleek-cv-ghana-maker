@@ -142,8 +142,8 @@ const PaymentSuccess = () => {
               Back to CV Maker
             </Button>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
