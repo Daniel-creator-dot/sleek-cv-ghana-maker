@@ -1,9 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
 import Header from '@/components/Header';
+import PaymentModal from '@/components/PaymentModal';
+import PDFGenerator from '@/components/PDFGenerator';
 
 export interface CVData {
   personalInfo: {
@@ -56,11 +58,36 @@ const Index = () => {
     skills: []
   });
 
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
   const updateCVData = (section: keyof CVData, data: any) => {
     setCvData(prev => ({
       ...prev,
       [section]: data
     }));
+  };
+
+  // Save CV data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('cvData', JSON.stringify(cvData));
+  }, [cvData]);
+
+  // Listen for PDF download event from payment success page
+  useEffect(() => {
+    const handleDownloadPDF = (event: any) => {
+      const pdfGenerator = document.querySelector('button') as HTMLButtonElement;
+      if (pdfGenerator) {
+        pdfGenerator.click();
+      }
+    };
+
+    window.addEventListener('downloadPDF', handleDownloadPDF);
+    return () => window.removeEventListener('downloadPDF', handleDownloadPDF);
+  }, []);
+
+  const handlePaymentSuccess = () => {
+    setIsPaymentModalOpen(false);
+    // The PDF download will be handled by the PaymentSuccess page
   };
 
   return (
@@ -96,12 +123,24 @@ const Index = () => {
           <Card className="p-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl border-0">
             <h3 className="text-2xl font-bold mb-4">Ready to Download Your Professional CV?</h3>
             <p className="text-blue-100 mb-6">Get your beautifully formatted CV as a high-quality PDF for just ₵3.99</p>
-            <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 duration-200">
+            <button 
+              onClick={() => setIsPaymentModalOpen(true)}
+              className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 duration-200"
+            >
               Download PDF - ₵3.99
             </button>
           </Card>
         </div>
       </div>
+
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        cvData={cvData}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      <PDFGenerator cvData={cvData} />
     </div>
   );
 };
