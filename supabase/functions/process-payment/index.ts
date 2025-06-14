@@ -27,6 +27,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Paystack test secret key not configured');
     }
 
+    // Get the origin from the request headers to build the callback URL
+    const origin = req.headers.get('origin') || 'http://localhost:8080';
+    const callbackUrl = `${origin}/payment-success`;
+
     // Initialize payment with Paystack
     const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -38,6 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
         email,
         amount: amount * 100, // Paystack expects amount in kobo
         currency: 'GHS',
+        callback_url: callbackUrl,
         metadata: {
           custom_fields: [
             {
