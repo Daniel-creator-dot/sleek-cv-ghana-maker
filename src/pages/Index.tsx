@@ -1,11 +1,10 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
 import Header from '@/components/Header';
 import PaymentModal from '@/components/PaymentModal';
-import PDFGenerator from '@/components/PDFGenerator';
+import PDFGenerator, { PDFGeneratorRef } from '@/components/PDFGenerator';
 
 export interface CVData {
   personalInfo: {
@@ -59,6 +58,7 @@ const Index = () => {
   });
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const pdfGeneratorRef = useRef<PDFGeneratorRef>(null);
 
   const updateCVData = (section: keyof CVData, data: any) => {
     setCvData(prev => ({
@@ -75,9 +75,9 @@ const Index = () => {
   // Listen for PDF download event from payment success page
   useEffect(() => {
     const handleDownloadPDF = (event: any) => {
-      const pdfGenerator = document.querySelector('button') as HTMLButtonElement;
-      if (pdfGenerator) {
-        pdfGenerator.click();
+      console.log('Download PDF event received:', event);
+      if (pdfGeneratorRef.current) {
+        pdfGeneratorRef.current.generatePDF();
       }
     };
 
@@ -140,7 +140,7 @@ const Index = () => {
         onPaymentSuccess={handlePaymentSuccess}
       />
 
-      <PDFGenerator cvData={cvData} />
+      <PDFGenerator ref={pdfGeneratorRef} cvData={cvData} />
     </div>
   );
 };
