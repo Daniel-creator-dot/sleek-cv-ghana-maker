@@ -21,114 +21,138 @@ const PDFGenerator = forwardRef<PDFGeneratorRef, PDFGeneratorProps>(({ cvData },
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPosition = 0;
       const margin = 20;
-      const lineHeight = 6;
+      const lineHeight = 7;
       
-      // Helper function to add text with word wrapping
-      const addText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10, color: number[] = [0, 0, 0]) => {
+      // Helper function to add text with word wrapping and better formatting
+      const addText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10, color: number[] = [0, 0, 0], font: string = 'normal') => {
         doc.setFontSize(fontSize);
+        doc.setFont('helvetica', font as any);
         doc.setTextColor(color[0], color[1], color[2]);
         const lines = doc.splitTextToSize(text, maxWidth);
         doc.text(lines, x, y);
         return lines.length * lineHeight;
       };
 
-      // Create gradient-like header background
+      // Create beautiful gradient header background
       doc.setFillColor(59, 130, 246); // Blue color
-      doc.rect(0, 0, pageWidth, 60, 'F');
+      doc.rect(0, 0, pageWidth, 70, 'F');
       
-      // Add a purple gradient effect
-      doc.setFillColor(147, 51, 234); // Purple color
-      doc.rect(pageWidth * 0.7, 0, pageWidth * 0.3, 60, 'F');
-
-      yPosition = 20;
-
-      // Header with name (white text on colored background)
-      doc.setFontSize(28);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255, 255, 255); // White text
-      doc.text(cvData.personalInfo.fullName || 'Your Name', margin, yPosition);
-      yPosition += 15;
-
-      // Contact information (white text)
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      const contactItems = [
-        { icon: '✉', text: cvData.personalInfo.email },
-        { icon: '📞', text: cvData.personalInfo.phone },
-        { icon: '📍', text: cvData.personalInfo.location },
-        { icon: '💼', text: cvData.personalInfo.linkedIn },
-        { icon: '🌐', text: cvData.personalInfo.portfolio }
-      ].filter(item => item.text);
-
-      let xOffset = margin;
-      contactItems.forEach((item, index) => {
-        if (xOffset + 40 > pageWidth - margin) {
-          yPosition += 8;
-          xOffset = margin;
-        }
-        doc.text(`${item.icon} ${item.text}`, xOffset, yPosition);
-        xOffset += doc.getTextWidth(`${item.icon} ${item.text}`) + 15;
-      });
-
-      yPosition = 75; // Move past the header
-
-      // Professional Summary with styled header
-      if (cvData.personalInfo.summary) {
-        // Section header with underline
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(59, 130, 246); // Blue color
-        doc.text('PROFESSIONAL SUMMARY', margin, yPosition);
-        
-        // Add underline
-        doc.setDrawColor(59, 130, 246);
-        doc.setLineWidth(0.8);
-        doc.line(margin, yPosition + 2, margin + 60, yPosition + 2);
-        
-        yPosition += 12;
-        
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(75, 85, 99); // Gray color
-        yPosition += addText(cvData.personalInfo.summary, margin, yPosition, pageWidth - 2 * margin, 11, [75, 85, 99]);
-        yPosition += 10;
+      // Add purple gradient overlay
+      for (let i = 0; i < 20; i++) {
+        const alpha = i / 20;
+        const r = Math.round(59 + (147 - 59) * alpha);
+        const g = Math.round(130 + (51 - 130) * alpha);
+        const b = Math.round(246 + (234 - 246) * alpha);
+        doc.setFillColor(r, g, b);
+        doc.rect(pageWidth * 0.6 + i, 0, 2, 70, 'F');
       }
 
-      // Experience Section
+      yPosition = 25;
+
+      // Header with name (large, bold, white text)
+      doc.setFontSize(32);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(cvData.personalInfo.fullName || 'Your Name', margin, yPosition);
+      yPosition += 20;
+
+      // Contact information in a professional layout
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      
+      const contactItems = [
+        { icon: '✉', text: cvData.personalInfo.email, width: 0 },
+        { icon: '📞', text: cvData.personalInfo.phone, width: 0 },
+        { icon: '📍', text: cvData.personalInfo.location, width: 0 },
+        { icon: '💼', text: cvData.personalInfo.linkedIn, width: 0 },
+        { icon: '🌐', text: cvData.personalInfo.portfolio, width: 0 }
+      ].filter(item => item.text);
+
+      // Calculate widths and arrange in two rows if needed
+      contactItems.forEach(item => {
+        item.width = doc.getTextWidth(`${item.icon} ${item.text}`);
+      });
+
+      let xOffset = margin;
+      let currentRowWidth = 0;
+      const maxRowWidth = pageWidth - 2 * margin;
+
+      contactItems.forEach((item, index) => {
+        if (currentRowWidth + item.width + 20 > maxRowWidth && index > 0) {
+          yPosition += 8;
+          xOffset = margin;
+          currentRowWidth = 0;
+        }
+        
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${item.icon} ${item.text}`, xOffset, yPosition);
+        xOffset += item.width + 20;
+        currentRowWidth += item.width + 20;
+      });
+
+      yPosition = 85; // Move past the header with proper spacing
+
+      // Professional Summary Section
+      if (cvData.personalInfo.summary) {
+        // Section header with modern styling
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(59, 130, 246);
+        doc.text('PROFESSIONAL SUMMARY', margin, yPosition);
+        
+        // Add decorative underline
+        doc.setDrawColor(59, 130, 246);
+        doc.setLineWidth(1.2);
+        doc.line(margin, yPosition + 3, margin + 80, yPosition + 3);
+        
+        yPosition += 15;
+        
+        // Summary text with proper formatting
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        const summaryHeight = addText(cvData.personalInfo.summary, margin, yPosition, pageWidth - 2 * margin, 11, [60, 60, 60]);
+        yPosition += summaryHeight + 12;
+      }
+
+      // Professional Experience Section
       if (cvData.experience.length > 0) {
-        if (yPosition > pageHeight - 60) {
+        if (yPosition > pageHeight - 80) {
           doc.addPage();
-          yPosition = 20;
+          yPosition = 25;
         }
 
         // Section header
-        doc.setFontSize(16);
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(59, 130, 246);
         doc.text('PROFESSIONAL EXPERIENCE', margin, yPosition);
         
-        // Add underline
         doc.setDrawColor(59, 130, 246);
-        doc.setLineWidth(0.8);
-        doc.line(margin, yPosition + 2, margin + 70, yPosition + 2);
+        doc.setLineWidth(1.2);
+        doc.line(margin, yPosition + 3, margin + 90, yPosition + 3);
         
-        yPosition += 12;
+        yPosition += 15;
 
-        cvData.experience.forEach((exp) => {
-          if (yPosition > pageHeight - 50) {
+        cvData.experience.forEach((exp, index) => {
+          if (yPosition > pageHeight - 60) {
             doc.addPage();
-            yPosition = 20;
+            yPosition = 25;
           }
 
-          // Position title
+          // Add subtle background for each experience entry
+          doc.setFillColor(248, 250, 252);
+          doc.rect(margin - 5, yPosition - 8, pageWidth - 2 * margin + 10, 35, 'F');
+
+          // Position title (larger, bold)
           doc.setFontSize(14);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 0, 0);
+          doc.setTextColor(30, 30, 30);
           doc.text(exp.position, margin, yPosition);
-          yPosition += 8;
+          yPosition += 9;
 
-          // Company and date
-          doc.setFontSize(11);
+          // Company name and date range on same line
+          doc.setFontSize(12);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(59, 130, 246);
           doc.text(exp.company, margin, yPosition);
@@ -136,51 +160,60 @@ const PDFGenerator = forwardRef<PDFGeneratorRef, PDFGeneratorProps>(({ cvData },
           const dateRange = `${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}`;
           const dateWidth = doc.getTextWidth(dateRange);
           doc.setFont('helvetica', 'normal');
-          doc.setTextColor(107, 114, 128);
+          doc.setTextColor(100, 100, 100);
           doc.text(dateRange, pageWidth - margin - dateWidth, yPosition);
-          yPosition += 8;
+          yPosition += 10;
 
+          // Description with proper formatting
           if (exp.description) {
             doc.setFont('helvetica', 'normal');
-            doc.setTextColor(75, 85, 99);
-            yPosition += addText(exp.description, margin, yPosition, pageWidth - 2 * margin, 10, [75, 85, 99]);
+            doc.setTextColor(70, 70, 70);
+            doc.setFontSize(10);
+            const descHeight = addText(exp.description, margin, yPosition, pageWidth - 2 * margin, 10, [70, 70, 70]);
+            yPosition += descHeight + 5;
           }
-          yPosition += 8;
+          
+          yPosition += 10; // Extra spacing between entries
         });
       }
 
       // Education Section
       if (cvData.education.length > 0) {
-        if (yPosition > pageHeight - 60) {
+        if (yPosition > pageHeight - 80) {
           doc.addPage();
-          yPosition = 20;
+          yPosition = 25;
         }
 
         // Section header
-        doc.setFontSize(16);
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(59, 130, 246);
         doc.text('EDUCATION', margin, yPosition);
         
-        // Add underline
         doc.setDrawColor(59, 130, 246);
-        doc.setLineWidth(0.8);
-        doc.line(margin, yPosition + 2, margin + 35, yPosition + 2);
+        doc.setLineWidth(1.2);
+        doc.line(margin, yPosition + 3, margin + 45, yPosition + 3);
         
-        yPosition += 12;
+        yPosition += 15;
 
         cvData.education.forEach((edu) => {
-          if (yPosition > pageHeight - 40) {
+          if (yPosition > pageHeight - 50) {
             doc.addPage();
-            yPosition = 20;
+            yPosition = 25;
           }
 
+          // Add subtle background
+          doc.setFillColor(248, 250, 252);
+          doc.rect(margin - 5, yPosition - 5, pageWidth - 2 * margin + 10, 25, 'F');
+
+          // Degree and field
           doc.setFontSize(13);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 0, 0);
+          doc.setTextColor(30, 30, 30);
           doc.text(`${edu.degree} in ${edu.field}`, margin, yPosition);
-          yPosition += 7;
+          yPosition += 8;
 
+          // Institution and dates
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(59, 130, 246);
@@ -189,88 +222,119 @@ const PDFGenerator = forwardRef<PDFGeneratorRef, PDFGeneratorProps>(({ cvData },
           const dateRange = `${edu.startDate} - ${edu.endDate}`;
           const dateWidth = doc.getTextWidth(dateRange);
           doc.setFont('helvetica', 'normal');
-          doc.setTextColor(107, 114, 128);
+          doc.setTextColor(100, 100, 100);
           doc.text(dateRange, pageWidth - margin - dateWidth, yPosition);
-          yPosition += 6;
+          yPosition += 7;
 
+          // GPA if available
           if (edu.gpa) {
             doc.setFont('helvetica', 'normal');
-            doc.setTextColor(75, 85, 99);
+            doc.setTextColor(70, 70, 70);
+            doc.setFontSize(10);
             doc.text(`GPA: ${edu.gpa}`, margin, yPosition);
             yPosition += 6;
           }
-          yPosition += 6;
+          yPosition += 12;
         });
       }
 
-      // Skills Section
+      // Skills Section with beautiful layout
       if (cvData.skills.length > 0) {
-        if (yPosition > pageHeight - 60) {
+        if (yPosition > pageHeight - 80) {
           doc.addPage();
-          yPosition = 20;
+          yPosition = 25;
         }
 
         // Section header
-        doc.setFontSize(16);
+        doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(59, 130, 246);
         doc.text('SKILLS', margin, yPosition);
         
-        // Add underline
         doc.setDrawColor(59, 130, 246);
-        doc.setLineWidth(0.8);
-        doc.line(margin, yPosition + 2, margin + 25, yPosition + 2);
+        doc.setLineWidth(1.2);
+        doc.line(margin, yPosition + 3, margin + 30, yPosition + 3);
         
-        yPosition += 12;
+        yPosition += 15;
 
         cvData.skills.forEach((skillCategory) => {
-          if (yPosition > pageHeight - 30) {
+          if (yPosition > pageHeight - 40) {
             doc.addPage();
-            yPosition = 20;
+            yPosition = 25;
           }
 
-          doc.setFontSize(12);
+          // Category title
+          doc.setFontSize(13);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(0, 0, 0);
-          doc.text(skillCategory.category + ':', margin, yPosition);
-          yPosition += 7;
+          doc.setTextColor(30, 30, 30);
+          doc.text(skillCategory.category, margin, yPosition);
+          yPosition += 10;
 
-          // Create skill tags visually
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'normal');
-          
+          // Create beautiful skill tags
           let xPos = margin;
-          const tagHeight = 6;
-          const tagPadding = 3;
+          const tagHeight = 8;
+          const tagPadding = 4;
+          const tagSpacing = 6;
           
-          skillCategory.items.forEach((skill) => {
+          skillCategory.items.forEach((skill, skillIndex) => {
+            doc.setFontSize(9);
             const skillWidth = doc.getTextWidth(skill) + (tagPadding * 2);
             
+            // Check if we need to wrap to next line
             if (xPos + skillWidth > pageWidth - margin) {
-              yPosition += tagHeight + 3;
+              yPosition += tagHeight + 4;
               xPos = margin;
             }
             
-            // Draw skill tag background
-            doc.setFillColor(219, 234, 254); // Light blue background
-            doc.roundedRect(xPos, yPosition - 4, skillWidth, tagHeight, 2, 2, 'F');
+            // Draw skill tag with rounded corners effect
+            const colors = [
+              [219, 234, 254], // Light blue
+              [233, 213, 255], // Light purple
+              [220, 252, 231], // Light green
+              [254, 240, 138], // Light yellow
+              [254, 226, 226]  // Light red
+            ];
+            const colorIndex = skillIndex % colors.length;
+            
+            doc.setFillColor(colors[colorIndex][0], colors[colorIndex][1], colors[colorIndex][2]);
+            doc.roundedRect(xPos, yPosition - 6, skillWidth, tagHeight, 2, 2, 'F');
+            
+            // Add subtle border
+            doc.setDrawColor(59, 130, 246);
+            doc.setLineWidth(0.2);
+            doc.roundedRect(xPos, yPosition - 6, skillWidth, tagHeight, 2, 2, 'S');
             
             // Add skill text
-            doc.setTextColor(30, 64, 175); // Dark blue text
-            doc.text(skill, xPos + tagPadding, yPosition);
+            const textColors = [
+              [30, 64, 175],   // Dark blue
+              [109, 40, 217],  // Dark purple
+              [5, 150, 105],   // Dark green
+              [180, 83, 9],    // Dark yellow/orange
+              [220, 38, 127]   // Dark pink
+            ];
+            doc.setTextColor(textColors[colorIndex][0], textColors[colorIndex][1], textColors[colorIndex][2]);
+            doc.setFont('helvetica', 'normal');
+            doc.text(skill, xPos + tagPadding, yPosition - 1);
             
-            xPos += skillWidth + 5;
+            xPos += skillWidth + tagSpacing;
           });
           
-          yPosition += tagHeight + 5;
+          yPosition += tagHeight + 8;
         });
       }
 
-      // Save the PDF
-      const fileName = `${cvData.personalInfo.fullName || 'CV'}_Resume.pdf`;
+      // Add a subtle footer
+      const footerY = pageHeight - 15;
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Generated with Professional CV Maker', pageWidth / 2, footerY, { align: 'center' });
+
+      // Save the PDF with a professional filename
+      const fileName = `${cvData.personalInfo.fullName || 'Professional_CV'}_Resume.pdf`;
       doc.save(fileName);
       
-      console.log('PDF generated successfully:', fileName);
+      console.log('Beautiful PDF generated successfully:', fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
