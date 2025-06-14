@@ -14,6 +14,7 @@ const PaymentSuccess = () => {
   const [isVerifying, setIsVerifying] = useState(true);
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const reference = searchParams.get('reference');
 
@@ -50,17 +51,179 @@ const PaymentSuccess = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    // Get CV data from localStorage (saved during form filling)
-    const savedCVData = localStorage.getItem('cvData');
-    if (savedCVData) {
-      const cvData = JSON.parse(savedCVData);
-      // Trigger PDF generation (this would be implemented in the main app)
-      window.dispatchEvent(new CustomEvent('downloadPDF', { detail: cvData }));
-    }
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
     
-    // Navigate back to main page
-    navigate('/');
+    try {
+      // Get CV data from localStorage
+      const savedCVData = localStorage.getItem('cvData');
+      if (!savedCVData) {
+        throw new Error('CV data not found');
+      }
+
+      const cvData = JSON.parse(savedCVData);
+      
+      // Import jsPDF and generate PDF directly here
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+      const margin = 20;
+      const lineHeight = 7;
+      
+      // Helper function to add text with word wrapping
+      const addText = (text: string, x: number, y: number, maxWidth: number, fontSize: number = 10) => {
+        doc.setFontSize(fontSize);
+        const lines = doc.splitTextToSize(text, maxWidth);
+        doc.text(lines, x, y);
+        return lines.length * lineHeight;
+      };
+
+      // Header with name and contact info
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(cvData.personalInfo.fullName || 'Your Name', margin, yPosition);
+      yPosition += 12;
+
+      // Contact information
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const contactInfo = [
+        cvData.personalInfo.email,
+        cvData.personalInfo.phone,
+        cvData.personalInfo.location,
+        cvData.personalInfo.linkedIn,
+        cvData.personalInfo.portfolio
+      ].filter(Boolean).join(' | ');
+      
+      if (contactInfo) {
+        yPosition += addText(contactInfo, margin, yPosition, pageWidth - 2 * margin);
+        yPosition += 5;
+      }
+
+      // Professional Summary
+      if (cvData.personalInfo.summary) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PROFESSIONAL SUMMARY', margin, yPosition);
+        yPosition += lineHeight + 2;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        yPosition += addText(cvData.personalInfo.summary, margin, yPosition, pageWidth - 2 * margin);
+        yPosition += 8;
+      }
+
+      // Experience Section
+      if (cvData.experience.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PROFESSIONAL EXPERIENCE', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        cvData.experience.forEach((exp) => {
+          if (yPosition > pageHeight - 50) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(exp.position, margin, yPosition);
+          yPosition += lineHeight;
+
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          const dateRange = `${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}`;
+          doc.text(`${exp.company} | ${dateRange}`, margin, yPosition);
+          yPosition += lineHeight + 2;
+
+          if (exp.description) {
+            doc.setFont('helvetica', 'normal');
+            yPosition += addText(exp.description, margin, yPosition, pageWidth - 2 * margin);
+          }
+          yPosition += 5;
+        });
+      }
+
+      // Education Section
+      if (cvData.education.length > 0) {
+        if (yPosition > pageHeight - 50) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('EDUCATION', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        cvData.education.forEach((edu) => {
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${edu.degree} in ${edu.field}`, margin, yPosition);
+          yPosition += lineHeight;
+
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          const dateRange = `${edu.startDate} - ${edu.endDate}`;
+          doc.text(`${edu.institution} | ${dateRange}`, margin, yPosition);
+          yPosition += lineHeight;
+
+          if (edu.gpa) {
+            doc.setFont('helvetica', 'normal');
+            doc.text(`GPA: ${edu.gpa}`, margin, yPosition);
+            yPosition += lineHeight;
+          }
+          yPosition += 3;
+        });
+      }
+
+      // Skills Section
+      if (cvData.skills.length > 0) {
+        if (yPosition > pageHeight - 50) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SKILLS', margin, yPosition);
+        yPosition += lineHeight + 2;
+
+        cvData.skills.forEach((skillCategory) => {
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(skillCategory.category + ':', margin, yPosition);
+          yPosition += lineHeight;
+
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          const skillsText = skillCategory.items.join(', ');
+          yPosition += addText(skillsText, margin, yPosition, pageWidth - 2 * margin);
+          yPosition += 3;
+        });
+      }
+
+      // Save the PDF
+      const fileName = `${cvData.personalInfo.fullName || 'CV'}_Resume.pdf`;
+      doc.save(fileName);
+      
+      console.log('PDF generated successfully:', fileName);
+      
+      // Wait a bit for the download to start, then navigate
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('PDF generation error:', err);
+      setError('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (isVerifying) {
@@ -126,17 +289,28 @@ const PaymentSuccess = () => {
           <div className="space-y-3">
             <Button 
               onClick={handleDownloadPDF}
+              disabled={isDownloading}
               className="w-full bg-green-600 hover:bg-green-700"
               size="lg"
             >
-              <Download className="mr-2 h-4 w-4" />
-              Download Your CV
+              {isDownloading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Your CV
+                </>
+              )}
             </Button>
             
             <Button 
               onClick={() => navigate('/')} 
               variant="outline" 
               className="w-full"
+              disabled={isDownloading}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to CV Maker
